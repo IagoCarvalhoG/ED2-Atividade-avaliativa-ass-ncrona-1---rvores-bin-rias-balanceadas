@@ -6,11 +6,13 @@ import java.util.LinkedList;
 public class AVLTree<T extends Comparable <T>>{
     private AVLNode<T> root;
     private boolean rotationInQueue;
-    private LinkedList<AVLNode<T>> nodes;
+    private AVLNode<T> subs;
+    private boolean balancingNeeded;
 
     public AVLTree(){
         this.rotationInQueue = false;
-        this.nodes = new LinkedList<AVLNode<T>>();
+        this.subs = new AVLNode<T>(null);
+        this.balancingNeeded = true;
     }
     
     public AVLNode<T> getRoot (){
@@ -28,6 +30,7 @@ public class AVLTree<T extends Comparable <T>>{
             this.root = newNode;
         }else{
             this.root = positionToPut(newNode,searchNode);
+            this.rotationInQueue = false;
         }
     }
 
@@ -37,89 +40,122 @@ public class AVLTree<T extends Comparable <T>>{
         }
         if(searchNode.getInfo().compareTo(newNode.getInfo()) > 0){
             searchNode.setFatBal(searchNode.getFatBal()-1);
-
-            if(searchNode.getFatBal() <= -2 && !this.rotationInQueue){
+            searchNode.setLeft(positionToPut(newNode, searchNode.getLeft()));
+            //if(searchNode.getLeft() == null){
+             //   searchNode.setLeft(newNode);
+             //}
+             if(this.rotationInQueue){
+                searchNode.setFatBal(searchNode.getFatBal()+1);
+            }
+            if(searchNode.getFatBal() <= -2 ){
                 rotationInQueue = true;
-                positionToPut(newNode, searchNode.getLeft());
                 searchNode = rightRotation(searchNode);
             }
-            
-            else{
-                 positionToPut(newNode, searchNode.getLeft());
-            if(searchNode.getLeft() == null){
-                searchNode.setLeft(newNode);
-             }
-            }
-
         }else{
             searchNode.setFatBal(searchNode.getFatBal()+1);
-            if(searchNode.getFatBal() >= 2 && !this.rotationInQueue){
-                rotationInQueue = true;
-                positionToPut(newNode, searchNode.getRight());
+            searchNode.setRight(positionToPut(newNode, searchNode.getRight())) ;
+            // if(searchNode.getRight() == null){
+            //     searchNode.setRight(newNode);
+           // }
+           if(this.rotationInQueue){
+                searchNode.setFatBal(searchNode.getFatBal()-1);
+            }
+            if(searchNode.getFatBal() >= 2){
+                this.rotationInQueue = true;
                 searchNode = leftRotation(searchNode);
             }
-            
-            else{
-            positionToPut(newNode, searchNode.getRight());
-             if(searchNode.getRight() == null){
-                 searchNode.setRight(newNode);
+        }
+        return searchNode;
+    }
+    public void delete(T key){
+        AVLNode<T> searchNode = this.root;
+        
+        if(searchNode ==null){
+            return;
+        }else{
+            this.root = delete(key,searchNode);
+            this.rotationInQueue = false;
+        }
+    }
+
+    private AVLNode<T> delete(T key, AVLNode<T> searchNode){
+          if(searchNode.getInfo().compareTo(key) == 0){
+            if(searchNode.getLeft() == null && searchNode.getRight() == null){
+                searchNode = null;
+            }else if(searchNode.getLeft() == null){
+                searchNode = searchNode.getRight();
+            }else{
+                this.subs.setRight(searchNode.getRight());
+                searchNode = getHigherFromLeft(searchNode.getLeft());
+                this.subs.setLeft(searchNode);
+                searchNode = this.subs;
+            }
+            return searchNode;
+        }
+        if(searchNode.getInfo().compareTo(key) > 0){
+            searchNode.setLeft(delete(key, searchNode.getLeft()));
+
+            if(this.balancingNeeded){
+                if(searchNode.getFatBal() == 0 ){
+                    searchNode.setFatBal(searchNode.getFatBal()+1);
+                    this.balancingNeeded = false;
+                }else if(searchNode.getFatBal() ==1){
+                    searchNode = leftRotation(searchNode);
+                    
+                }else{
+                    searchNode.setFatBal(0);  
+        }
+            }
+        }else{
+            searchNode.setRight(delete(key, searchNode.getRight())) ;
+
+           if(this.balancingNeeded){
+            if(searchNode.getFatBal() == 0){
+                searchNode.setFatBal(searchNode.getFatBal()-1);
+                this.balancingNeeded = false;
+            }else if(searchNode.getFatBal() ==1){
+                searchNode.setFatBal(0);
+            }else{
+             searchNode = rightRotation(searchNode);
              }
             }
         }
         return searchNode;
     }
 
-    public void delete(T key){
-        searchNodeToDelete(key, this.root);
-        
-        AVLNode<T> nodeToDelete = nodes.pollFirst();
-        AVLNode<T> nodeToReplace = ne
-        if(nodeToDelete.getLeft() == null && nodeToDelete.getRight() == null){
-            nodeToDelete = null;
+     private AVLNode<T> getHigherFromLeft(AVLNode<T> searchNode){
+        if(searchNode == null){
+            return searchNode;
         }
-        else if(nodeToDelete.getLeft() != null){
-            nodeToReplace = nodeToDelete.getLeft();
-            while(nodeToReplace.getRight() != null){
-            nodeToReplace = nodeToReplace.getRight();
-        }
+        getHigherFromLeft(searchNode.getRight());
+        if(this.subs.getInfo() == null){
+            this.subs.setInfo(searchNode.getInfo());
+            searchNode = searchNode.getLeft();
+           
         }else{
-            nodeToReplace = nodeToDelete.getRight();
+        if(searchNode.getFatBal() == 0 && balancingNeeded){
+            searchNode.setFatBal(searchNode.getFatBal()-1);
+            this.balancingNeeded = false;
+        }else if(searchNode.getFatBal() ==1 && balancingNeeded){
+            searchNode.setFatBal(0);
+        }else if(balancingNeeded){
+             searchNode = rightRotation(searchNode);
         }
-        nodeToDelete.setInfo(nodeToReplace.getInfo());
     }
-
-    private void searchNodeToDelete(T key, AVLNode<T> searchNode){
-         if(searchNode.getInfo() == key){
-            nodes.addFirst(searchNode);
-            return;
-        }
-          if(searchNode.getInfo().compareTo(key) > 0){
-            nodes.addFirst(searchNode);
-            searchNodeToDelete(key, searchNode.getLeft());
-            return;
-          }
-          
-          else{
-             nodes.addFirst(searchNode);
-            searchNodeToDelete(key, searchNode.getRight());
-            return;
-          }
-    }
-
-    private AVLNode<T> getHigherFromLeft(N){
-
+     return searchNode;
     }
     private AVLNode<T> rightRotation(AVLNode<T>a){
         AVLNode<T> b = a.getLeft();
         AVLNode<T> c;
-        if(b.getFatBal() == -1 || (b.getFatBal() == -2 && a.getFatBal()==-2)){
+        if(b.getFatBal() == -1){
             a.setLeft(b.getRight());
             b.setRight(a);
-            if(b.getFatBal() == -2){
+            /*if(b.getFatBal() == -2){
                 a.setFatBal(+1);
             }else{
                 a.setFatBal(0);
-            }
+            }*/
+            a.setFatBal(0);
             b.setFatBal(0);
             a=b;
         }else{
@@ -128,7 +164,7 @@ public class AVLTree<T extends Comparable <T>>{
             a.setLeft(c.getRight());
             c.setLeft(b);
             c.setRight(a);
-            if(c.getFatBal() == 0){
+            /*if(c.getFatBal() == 0){
                 b.setFatBal(0);
                 a.setFatBal(0);
                 c.setFatBal(0);
@@ -146,24 +182,35 @@ public class AVLTree<T extends Comparable <T>>{
                 b.setFatBal(b.getFatBal() -2);
                 c.setFatBal(0);
             }  
-            }
+            }*/
+            if (c.getFatBal() == -1) {
+                a.setFatBal(1);
+                } else {
+                a.setFatBal(0);
+                }
+                if (c.getFatBal() == 1) {
+                b.setFatBal(-1);
+                } else {
+                b.setFatBal(0);
+                }
+                c.setFatBal(0);
             a=c;
         }
-        this.rotationInQueue = false;
         return a;
     }
 
     private AVLNode<T> leftRotation(AVLNode<T>a){
         AVLNode<T> b = a.getRight();
         AVLNode<T> c;
-        if(b.getFatBal() == 1 || (b.getFatBal() == 2 && a.getFatBal()==2)){
+        if(b.getFatBal() == 1){
             a.setRight(b.getLeft());
             b.setLeft(a);
-            if(b.getFatBal() == 2){
+          /*  if(b.getFatBal() == 2){
                 a.setFatBal(-1);
             }else{
                 a.setFatBal(0);
-            }
+            }*/ 
+            a.setFatBal(0);
             b.setFatBal(0);
             a=b;
         }else{
@@ -172,7 +219,7 @@ public class AVLTree<T extends Comparable <T>>{
             a.setRight(c.getLeft());
             c.setRight(b);
             c.setLeft(a);
-            if(c.getFatBal() == 0){
+           /*  if(c.getFatBal() == 0){
                 b.setFatBal(0);
                 a.setFatBal(0);
                 c.setFatBal(0);
@@ -190,10 +237,20 @@ public class AVLTree<T extends Comparable <T>>{
                 b.setFatBal(b.getFatBal() +2);
                 c.setFatBal(0);
             }  
-            }
+            }*/
+            if (c.getFatBal() == 1) {
+                a.setFatBal(-1);
+                } else {
+                a.setFatBal(0);
+                }
+                if (c.getFatBal() == -1) {
+                b.setFatBal(1);
+                } else {
+                b.setFatBal(0);
+                }
+            c.setFatBal(0);
             a=c;
         }
-        this.rotationInQueue = false;
         return a;
     }
 
